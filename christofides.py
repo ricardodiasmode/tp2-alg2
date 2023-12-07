@@ -46,7 +46,6 @@ def christofides_tsp(graph):
     tour = []
     for edge in eulerian_circuit_edges:
         tour.append(edge[0])
-
-        tour.append(eulerian_circuit_edges[-1][1])
+    tour.append(eulerian_circuit_edges[-1][1])
 
     return tour

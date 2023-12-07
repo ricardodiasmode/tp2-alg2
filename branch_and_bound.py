@@ -1,104 +1,80 @@
 import time
 import math
+import numpy as np
 
 maxsize = float('inf')
-max_execution_time = 1
+max_execution_time = 60 * 30
+
 
 class MaxExecTime(Exception):
     pass
 
-class branch_and_bound:
-    N = 0
-    final_path = []
-    visited = []
-    final_res = 0
 
+class branch_and_bound:
     def __init__(self, n):
         self.N = n
-        self.final_path = [None] * (n + 1)
-        self.visited = [False] * n
+        self.final_path = np.empty(n + 1, dtype=int)
+        self.visited = np.zeros(n, dtype=bool)
         self.final_res = maxsize
 
-    def copyToFinal(self, curr_path):
+    def copy_to_final(self, curr_path):
         self.final_path[:self.N + 1] = curr_path[:]
         self.final_path[self.N] = curr_path[0]
 
-    def firstMin(self, adj, i):
-        min_val = maxsize
-        for k in range(self.N):
-            if adj[i][k] < min_val and i != k:
-                min_val = adj[i][k]
-        return min_val
+    def first_min(self, adj, i):
+        return np.min(np.delete(adj[i], i))
 
-    def secondMin(self, adj, i):
-        first, second = maxsize, maxsize
-        for j in range(self.N):
-            if i == j:
-                continue
-            if adj[i][j] <= first:
-                second = first
-                first = adj[i][j]
-            elif adj[i][j] <= second and adj[i][j] != first:
-                second = adj[i][j]
-        return second
+    def second_min(self, adj, i):
+        sorted_row = np.partition(adj[i], 1)
+        return sorted_row[1]
 
-    def TSP(self, adj):
-        curr_bound = 0
-        curr_path = [-1] * (self.N + 1)
-        visited = [False] * self.N
-        initial_exec_time = time.time()
+    def tsp_util(self, adj, curr_bound, curr_weight, level, curr_path):
+        current_time = time.time() - self.initial_exec_time
+        if current_time > max_execution_time:
+            raise MaxExecTime("Max execution time reached")
+
+        if level == self.N:
+            if adj[curr_path[level - 1]][curr_path[0]] != 0:
+                curr_res = curr_weight + adj[curr_path[level - 1]][curr_path[0]]
+                if curr_res < self.final_res:
+                    self.copy_to_final(curr_path)
+                    self.final_res = curr_res
+            return
 
         for i in range(self.N):
-            curr_bound += (self.firstMin(adj, i) + self.secondMin(adj, i))
-
-        curr_bound = math.ceil(curr_bound / 2)
-
-        visited[0] = True
-        curr_path[0] = 0
-
-        stack = []
-        stack.append((curr_bound, 0, 1, curr_path[:], visited[:]))
-
-        while stack:
-            curr_bound, curr_weight, level, curr_path, visited = stack.pop()
-
-            current_time = time.time() - initial_exec_time
+            current_time = time.time() - self.initial_exec_time
             if current_time > max_execution_time:
                 raise MaxExecTime("Max execution time reached")
 
-            if level == self.N:
-                if adj[curr_path[level - 1]][curr_path[0]] != 0:
-                    curr_res = curr_weight + adj[curr_path[level - 1]][curr_path[0]]
-                    if curr_res < self.final_res:
-                        self.copyToFinal(curr_path)
-                        self.final_res = curr_res
-                continue
+            if adj[curr_path[level - 1]][i] != 0 and not self.visited[i]:
+                temp = curr_bound
+                curr_weight += adj[curr_path[level - 1]][i]
 
-            for i in range(self.N):
+                if level == 1:
+                    curr_bound -= (self.first_min(adj, curr_path[level - 1]) + self.first_min(adj, i)) / 2
+                else:
+                    curr_bound -= (self.second_min(adj, curr_path[level - 1]) + self.first_min(adj, i)) / 2
 
-                current_time = time.time() - initial_exec_time
-                if current_time > max_execution_time:
-                    raise MaxExecTime("Max execution time reached")
+                if curr_bound + curr_weight < self.final_res:
+                    curr_path[level] = i
+                    self.visited[i] = True
+                    self.tsp_util(adj, curr_bound, curr_weight, level + 1, curr_path)
 
-                if adj[curr_path[level - 1]][i] != 0 and not visited[i]:
-                    temp = curr_bound
-                    curr_weight += adj[curr_path[level - 1]][i]
+                curr_weight -= adj[curr_path[level - 1]][i]
+                curr_bound = temp
+                self.visited[i] = False
 
-                    if level == 1:
-                        curr_bound -= (self.firstMin(adj, curr_path[level - 1]) + self.firstMin(adj, i)) / 2
-                    else:
-                        curr_bound -= (self.secondMin(adj, curr_path[level - 1]) + self.firstMin(adj, i)) / 2
+    def TSP(self, adj):
+        self.initial_exec_time = time.time()
+        curr_bound = 0
+        curr_path = np.full(self.N + 1, -1, dtype=int)
+        self.visited[0] = True
+        curr_path[0] = 0
 
-                    if curr_bound + curr_weight < self.final_res:
-                        curr_path[level] = i
-                        visited[i] = True
-                        stack.append((curr_bound, curr_weight, level + 1, curr_path[:], visited[:]))
+        for i in range(self.N):
+            curr_bound += self.first_min(adj, i) + self.second_min(adj, i)
 
-                    curr_weight -= adj[curr_path[level - 1]][i]
-                    curr_bound = temp
-                    visited = [False] * len(visited)
-                    for j in range(level):
-                        if curr_path[j] != -1:
-                            visited[curr_path[j]] = True
+        curr_bound = math.ceil(curr_bound / 2)
+        self.tsp_util(adj, curr_bound, 0, 1, curr_path)
 
         return self.final_res, self.final_path

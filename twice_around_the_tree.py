@@ -1,7 +1,7 @@
 import time
 import networkx as nx
 
-max_execution_time = 60 * 30
+max_execution_time = 30 * 60
 
 
 class MaxExecTime(Exception):

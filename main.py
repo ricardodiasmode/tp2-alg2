@@ -1,3 +1,5 @@
+import math
+
 import networkx as nx
 import pandas as pd
 import multiprocessing
@@ -52,54 +54,64 @@ def ler_dataset(nome_dataset):
     return grafo, coordenadas
 
 
-def plotar_grafo_com_pesos(coord, grafo, cicle):
+def plotar_grafo_com_pesos(coord, grafo, cycle, caminho_salvar):
     posicoes = {i: (coord[i+1][0], coord[i+1][1]-1) for i in grafo.nodes}
 
-    # Filtra as arestas que fazem parte do ciclo hamiltoniano
-    arestas_a_plotar = [(cicle[i], cicle[i+1]) for i in range(len(cicle)-1)]
+    arestas_a_plotar = [(cycle[i], cycle[i+1]) for i in range(len(cycle)-1)]
+    arestas_a_plotar.append((cycle[-1], cycle[0]))
 
-    # Adiciona a aresta que fecha o ciclo (do último para o primeiro nó)
-    arestas_a_plotar.append((cicle[-1], cicle[0]))
+    plt.clf()  # Limpar a figura anterior
 
-    # Cria o plot do grafo com as arestas filtradas
-    nx.draw(grafo, pos=posicoes, edgelist=arestas_a_plotar, with_labels=True, font_weight='bold', node_size=700, node_color='skyblue')
+    nx.draw(grafo, pos=posicoes, edgelist=arestas_a_plotar, with_labels=True, font_weight='light',
+            node_size=int(math.log(19000 - len(posicoes))*3), node_color='skyblue', font_size=6)
 
-    # Exibe o plot
-    plt.show()
+    plt.savefig(caminho_salvar)
+
+
+def adicionar_linha_arquivo(label, caminho):
+    # Abre o arquivo no modo de escrita ('a' para adicionar ao final do arquivo)
+    with open(caminho, 'a') as arquivo:
+        # Escreve a linha no formato "{label}"
+        arquivo.write(f'{label}\n')
 
 
 tp_datasets = ler_tp_datasets('tp2_datasets.txt')
 tp_datasets.pop(0)
 
 # Branch and bound
-# for line in tp_datasets:
-#     print("Lendo: " + line.split('\t')[0] + " e aplicando branch and bound...")
-#     grafo_do_dataset, coord = ler_dataset(line.split('\t')[0])
-#
-#     bb_class = branch_and_bound.branch_and_bound(len(grafo_do_dataset))
-#
-#     try:
-#         bb_class.TSP(grafo_do_dataset)
-#         print("Minimum cost :", bb_class.final_res)
-#         print("Path Taken : ", end=' ')
-#         for i in range(bb_class.N + 1):
-#             print(bb_class.final_path[i], end=' ')
-#     except branch_and_bound.MaxExecTime as err:
-#         print(err)
+for line in tp_datasets:
+    dataset_name = line.split('\t')[0]
+    print("Lendo: " + dataset_name + " e aplicando branch and bound...")
+    G, coord = ler_dataset(dataset_name)
+
+    bb_class = branch_and_bound.branch_and_bound(len(G))
+
+    try:
+        bb_class.TSP(G)
+        print("Minimum cost :", bb_class.final_res)
+        print("Path Taken : ", bb_class.final_path)
+        plotar_grafo_com_pesos(coord, G, bb_class.final_path, f'plots/bb/{dataset_name}')
+        adicionar_linha_arquivo(dataset_name + ": " + str(bb_class.final_path), f'plots/bb/Success.txt')
+    except branch_and_bound.MaxExecTime as err:
+        print(err)
+        adicionar_linha_arquivo(dataset_name, f'plots/bb/NA.txt')
 
 # Twice-Around-The-Tree
-# for line in tp_datasets:
-#     print("Lendo: " + line.split('\t')[0] + " e aplicando twice-around-the-tree...")
-#     grafo_do_dataset, coordenadas = ler_dataset(line.split('\t')[0])
-#     adjacency_matrix = pd.DataFrame(grafo_do_dataset)
-#     G = nx.from_pandas_adjacency(adjacency_matrix)
-#
-#     try:
-#         hamiltonian_cycle = twice_around_the_tree.approx_tsp_tour(G, 'weight')
-#         print("Approximate Hamiltonian Cycle:", hamiltonian_cycle)
-#         plotar_grafo_com_pesos(coordenadas, G, hamiltonian_cycle)
-#     except twice_around_the_tree.MaxExecTime as err:
-#         print(err)
+for line in tp_datasets:
+    dataset_name = line.split('\t')[0]
+    print("Lendo: " + dataset_name + " e aplicando twice-around-the-tree...")
+    grafo_do_dataset, coordenadas = ler_dataset(dataset_name)
+    adjacency_matrix = pd.DataFrame(grafo_do_dataset)
+    G = nx.from_pandas_adjacency(adjacency_matrix)
+
+    try:
+        hamiltonian_cycle = twice_around_the_tree.approx_tsp_tour(G, 'weight')
+        print("Approximate Hamiltonian Cycle:", hamiltonian_cycle)
+        plotar_grafo_com_pesos(coordenadas, G, hamiltonian_cycle, f'plots/tatt/{dataset_name}')
+        adicionar_linha_arquivo(dataset_name + ": " + str(hamiltonian_cycle), f'plots/tatt/Success.txt')
+    except twice_around_the_tree.MaxExecTime as err:
+        print(err)
+        adicionar_linha_arquivo(dataset_name, f'plots/tatt/NA.txt')
 
 
 # Christofides
@@ -112,8 +124,9 @@ def main(queue, G):
 
 if __name__ == "__main__":
     for line in tp_datasets:
-        print("Lendo: " + line.split('\t')[0] + " e aplicando Christofides...")
-        grafo_do_dataset, coord = ler_dataset(line.split('\t')[0])
+        dataset_name = line.split('\t')[0]
+        print("Lendo: " + dataset_name + " e aplicando Christofides...")
+        grafo_do_dataset, coord = ler_dataset(dataset_name)
         adjacency_matrix = pd.DataFrame(grafo_do_dataset)
         G = nx.from_pandas_adjacency(adjacency_matrix)
 
@@ -124,7 +137,7 @@ if __name__ == "__main__":
         p.start()
 
         # Esperar por 30 minutos ou até que o processo termine
-        p.join(60 * 30)
+        p.join(30 * 60)
 
         # Se o processo ainda estiver ativo
         if p.is_alive():
@@ -136,6 +149,8 @@ if __name__ == "__main__":
         if not result_queue.empty():
             tour_result = result_queue.get()
             print("Tour aproximado: ", tour_result)
-            plotar_grafo_com_pesos(coord, G, tour_result)
+            plotar_grafo_com_pesos(coord, G, tour_result, f'plots/christofides/{dataset_name}')
+            adicionar_linha_arquivo(dataset_name + ": " + str(tour_result), f'plots/christofides/Success.txt')
         else:
             print("Max execution time reached.")
+            adicionar_linha_arquivo(dataset_name, f'plots/christofides/NA.txt')

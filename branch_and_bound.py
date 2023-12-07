@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 maxsize = float('inf')
-max_execution_time = 60 * 30
+max_execution_time = 30 * 60
 
 
 class MaxExecTime(Exception):

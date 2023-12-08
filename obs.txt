@@ -1,0 +1,2 @@
+- foi necessario aumentar o limite de recursao;
+- retirando o tempo limite, para o tatt e para o christofides, o pc ficou sem memória, provavelmente devido à recursão;

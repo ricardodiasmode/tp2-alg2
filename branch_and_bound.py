@@ -1,6 +1,8 @@
 import time
 import math
 import numpy as np
+import sys
+sys.setrecursionlimit(10000)
 
 maxsize = float('inf')
 max_execution_time = 30 * 60

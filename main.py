@@ -1,4 +1,5 @@
 import math
+import time
 
 import networkx as nx
 import pandas as pd
@@ -9,130 +10,137 @@ import twice_around_the_tree
 import matplotlib.pyplot as plt
 
 
-def ler_tp_datasets(arquivo_path):
-    with open(arquivo_path, 'r') as arquivo:
-        linhas = arquivo.readlines()
-    return linhas
+def read_tp_datasets(path_file):
+    with open(path_file, 'r') as file:
+        lines = file.readlines()
+    return lines
 
 
-def ler_dataset(nome_dataset):
+def read_dataset(dataset_name):
 
-    def convert_to_int(valor):
-        return int(float(valor))
+    def convert_to_int(value):
+        return int(float(value))
 
-    caminho_dataset = f'data/{nome_dataset}.tsp'
-    grafo = []
+    dataset_path = f'data/{dataset_name}.tsp'
+    graph = []
 
-    with open(caminho_dataset, 'r') as arquivo:
-        linhas = arquivo.readlines()
+    with open(dataset_path, 'r') as arquivo:
+        lines = arquivo.readlines()
         coord_section = False
-        coordenadas = {}
+        coords = {}
 
-        for linha in linhas:
-            partes = linha.split()
+        for every_line in lines:
+            part = every_line.split()
 
-            if len(partes) > 0:
-                if partes[0] == 'NODE_COORD_SECTION':
+            if len(part) > 0:
+                if part[0] == 'NODE_COORD_SECTION':
                     coord_section = True
-                elif partes[0] == 'EOF':
+                elif part[0] == 'EOF':
                     coord_section = False
                 elif coord_section:
-                    no, x, y = map(convert_to_int, partes)
-                    coordenadas[no] = (x, y)
+                    node, x, y = map(convert_to_int, part)
+                    coords[node] = (x, y)
 
-    # Adicionar nós e arestas ao grafo
-    for u, pos_u in coordenadas.items():
+    for u, pos_u in coords.items():
         node_row = []
-        for v, pos_v in coordenadas.items():
+        for v, pos_v in coords.items():
             if u != v:
                 distance = ((pos_u[0] - pos_v[0]) ** 2 + (pos_u[1] - pos_v[1]) ** 2) ** 0.5
                 node_row.append(distance)
             else:
                 node_row.append(-1)
-        grafo.append(node_row)
+        graph.append(node_row)
 
-    return grafo, coordenadas
-
-
-def plotar_grafo_com_pesos(coord, grafo, cycle, caminho_salvar):
-    posicoes = {i: (coord[i+1][0], coord[i+1][1]-1) for i in grafo.nodes}
-
-    arestas_a_plotar = [(cycle[i], cycle[i+1]) for i in range(len(cycle)-1)]
-    arestas_a_plotar.append((cycle[-1], cycle[0]))
-
-    plt.clf()  # Limpar a figura anterior
-
-    nx.draw(grafo, pos=posicoes, edgelist=arestas_a_plotar, with_labels=True, font_weight='light',
-            node_size=int(math.log(19000 - len(posicoes))*3), node_color='skyblue', font_size=6)
-
-    plt.savefig(caminho_salvar)
+    return graph, coords
 
 
-def adicionar_linha_arquivo(label, caminho):
-    # Abre o arquivo no modo de escrita ('a' para adicionar ao final do arquivo)
-    with open(caminho, 'a') as arquivo:
-        # Escreve a linha no formato "{label}"
-        arquivo.write(f'{label}\n')
+def plot_and_save_graph(coords, graph, cycle, path_to_save):
+    positions = {i: (coords[i+1][0], coords[i+1][1]-1) for i in graph.nodes}
+
+    edges_to_plot = [(cycle[i], cycle[i+1]) for i in range(len(cycle)-1)]
+    edges_to_plot.append((cycle[-1], cycle[0]))
+
+    plt.clf()
+
+    nx.draw(graph, pos=positions, edgelist=edges_to_plot, with_labels=True, font_weight='light',
+            node_size=int(math.log(19000 - len(positions))*3), node_color='skyblue', font_size=6)
+
+    plt.savefig(path_to_save)
 
 
-tp_datasets = ler_tp_datasets('tp2_datasets.txt')
+def add_line_on_file(line_to_add, path):
+    with open(path, 'a') as file:
+        file.write(f'{line_to_add}\n')
+
+
+tp_datasets = read_tp_datasets('tp2_datasets.txt')
 tp_datasets.pop(0)
 
 # Branch and bound
-for line in tp_datasets:
-    dataset_name = line.split('\t')[0]
-    print("Lendo: " + dataset_name + " e aplicando branch and bound...")
-    G, coord = ler_dataset(dataset_name)
-
-    bb_class = branch_and_bound.branch_and_bound(len(G))
-
-    try:
-        bb_class.TSP(G)
-        print("Minimum cost :", bb_class.final_res)
-        print("Path Taken : ", bb_class.final_path)
-        plotar_grafo_com_pesos(coord, G, bb_class.final_path, f'plots/bb/{dataset_name}')
-        adicionar_linha_arquivo(dataset_name + ": " + str(bb_class.final_path), f'plots/bb/Success.txt')
-    except branch_and_bound.MaxExecTime as err:
-        print(err)
-        adicionar_linha_arquivo(dataset_name, f'plots/bb/NA.txt')
+# for line in tp_datasets:
+#     dataset_name = line.split('\t')[0]
+#     print("Lendo: " + dataset_name + " e aplicando branch and bound...")
+#     G, coord = ler_dataset(dataset_name)
+#
+#     bb_class = branch_and_bound.branch_and_bound(len(G))
+#
+#     try:
+#         before = time.time()
+#         bb_class.TSP(G)
+#         after = time.time()
+#         timelapse = after - before
+#         print("Minimum cost :", bb_class.final_res)
+#         print("Path Taken : ", bb_class.final_path)
+#         plotar_grafo_com_pesos(coord, G, bb_class.final_path, f'plots/bb/{dataset_name}')
+#         adicionar_linha_arquivo(dataset_name + ": " + "qualidade=" + str(bb_class.final_res) + ", tempo decorrido=" + str(timelapse),
+#                                 f'plots/bb/Success.txt')
+#     except branch_and_bound.MaxExecTime as err:
+#         print(err)
+#         adicionar_linha_arquivo(dataset_name, f'plots/bb/NA.txt')
 
 # Twice-Around-The-Tree
-for line in tp_datasets:
-    dataset_name = line.split('\t')[0]
-    print("Lendo: " + dataset_name + " e aplicando twice-around-the-tree...")
-    grafo_do_dataset, coordenadas = ler_dataset(dataset_name)
-    adjacency_matrix = pd.DataFrame(grafo_do_dataset)
-    G = nx.from_pandas_adjacency(adjacency_matrix)
-
-    try:
-        hamiltonian_cycle = twice_around_the_tree.approx_tsp_tour(G, 'weight')
-        print("Approximate Hamiltonian Cycle:", hamiltonian_cycle)
-        plotar_grafo_com_pesos(coordenadas, G, hamiltonian_cycle, f'plots/tatt/{dataset_name}')
-        adicionar_linha_arquivo(dataset_name + ": " + str(hamiltonian_cycle), f'plots/tatt/Success.txt')
-    except twice_around_the_tree.MaxExecTime as err:
-        print(err)
-        adicionar_linha_arquivo(dataset_name, f'plots/tatt/NA.txt')
+# for line in tp_datasets:
+#     dataset_name = line.split('\t')[0]
+#     print("Lendo: " + dataset_name + " e aplicando twice-around-the-tree...")
+#     grafo_do_dataset, coordenadas = ler_dataset(dataset_name)
+#     adjacency_matrix = pd.DataFrame(grafo_do_dataset)
+#     G = nx.from_pandas_adjacency(adjacency_matrix)
+#
+#     try:
+#         before = time.time()
+#         hamiltonian_cycle, path_len = twice_around_the_tree.approx_tsp_tour(G, 'weight')
+#         after = time.time()
+#         timelapse = after - before
+#
+#         print("Approximate Hamiltonian Cycle:", hamiltonian_cycle)
+#         plotar_grafo_com_pesos(coordenadas, G, hamiltonian_cycle, f'plots/tatt/{dataset_name}')
+#         adicionar_linha_arquivo(dataset_name + ": " + "qualidade=" + str(path_len) + ", tempo decorrido=" + str(timelapse),
+#                                 f'plots/tatt/Success.txt')
+#     except twice_around_the_tree.MaxExecTime as err:
+#         print(err)
+#         adicionar_linha_arquivo(dataset_name, f'plots/tatt/NA.txt')
 
 
 # Christofides
 def main(queue, G):
-    tour = christofides.christofides_tsp(G)
+    tour, tour_weight = christofides.christofides_tsp(G)
 
     # Enviar o resultado para a fila
-    queue.put(tour)
+    queue.put([tour, tour_weight])
 
 
 if __name__ == "__main__":
     for line in tp_datasets:
         dataset_name = line.split('\t')[0]
         print("Lendo: " + dataset_name + " e aplicando Christofides...")
-        grafo_do_dataset, coord = ler_dataset(dataset_name)
+        grafo_do_dataset, coord = read_dataset(dataset_name)
         adjacency_matrix = pd.DataFrame(grafo_do_dataset)
         G = nx.from_pandas_adjacency(adjacency_matrix)
 
         # Criar uma fila para comunicação entre processos
         result_queue = multiprocessing.Queue()
 
+        before = time.time()
         p = multiprocessing.Process(target=main, args=(result_queue, G))
         p.start()
 
@@ -145,12 +153,16 @@ if __name__ == "__main__":
             p.terminate()
             p.join()
 
+        after = time.time()
+        timelapse = after - before
+
         # Recuperar o resultado da fila
         if not result_queue.empty():
             tour_result = result_queue.get()
-            print("Tour aproximado: ", tour_result)
-            plotar_grafo_com_pesos(coord, G, tour_result, f'plots/christofides/{dataset_name}')
-            adicionar_linha_arquivo(dataset_name + ": " + str(tour_result), f'plots/christofides/Success.txt')
+            print("Tour aproximado: ", tour_result[0])
+            plot_and_save_graph(coord, G, tour_result[0], f'plots/christofides/{dataset_name}')
+            add_line_on_file(dataset_name + ": " + "qualidade=" + str(tour_result[1]) + ", tempo decorrido=" + str(timelapse),
+                                    f'plots/christofides/Success.txt')
         else:
             print("Max execution time reached.")
-            adicionar_linha_arquivo(dataset_name, f'plots/christofides/NA.txt')
+            add_line_on_file(dataset_name, f'plots/christofides/NA.txt')

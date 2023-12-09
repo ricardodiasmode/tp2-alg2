@@ -77,48 +77,48 @@ tp_datasets = read_tp_datasets('tp2_datasets.txt')
 tp_datasets.pop(0)
 
 # Branch and bound
-# for line in tp_datasets:
-#     dataset_name = line.split('\t')[0]
-#     print("Lendo: " + dataset_name + " e aplicando branch and bound...")
-#     G, coord = ler_dataset(dataset_name)
-#
-#     bb_class = branch_and_bound.branch_and_bound(len(G))
-#
-#     try:
-#         before = time.time()
-#         bb_class.TSP(G)
-#         after = time.time()
-#         timelapse = after - before
-#         print("Minimum cost :", bb_class.final_res)
-#         print("Path Taken : ", bb_class.final_path)
-#         plotar_grafo_com_pesos(coord, G, bb_class.final_path, f'plots/bb/{dataset_name}')
-#         adicionar_linha_arquivo(dataset_name + ": " + "qualidade=" + str(bb_class.final_res) + ", tempo decorrido=" + str(timelapse),
-#                                 f'plots/bb/Success.txt')
-#     except branch_and_bound.MaxExecTime as err:
-#         print(err)
-#         adicionar_linha_arquivo(dataset_name, f'plots/bb/NA.txt')
+for line in tp_datasets:
+    dataset_name = line.split('\t')[0]
+    print("Lendo: " + dataset_name + " e aplicando branch and bound...")
+    G, coord = read_dataset(dataset_name)
+
+    bb_class = branch_and_bound.branch_and_bound(len(G))
+
+    try:
+        before = time.time()
+        bb_class.TSP(G)
+        after = time.time()
+        timelapse = after - before
+        print("Minimum cost :", bb_class.final_res)
+        print("Path Taken : ", bb_class.final_path)
+        plot_and_save_graph(coord, G, bb_class.final_path, f'plots/bb/{dataset_name}')
+        add_line_on_file(dataset_name + ": " + "qualidade=" + str(bb_class.final_res) + ", tempo decorrido=" + str(timelapse),
+                                f'plots/bb/Success.txt')
+    except branch_and_bound.MaxExecTime as err:
+        print(err)
+        add_line_on_file(dataset_name, f'plots/bb/NA.txt')
 
 # Twice-Around-The-Tree
-# for line in tp_datasets:
-#     dataset_name = line.split('\t')[0]
-#     print("Lendo: " + dataset_name + " e aplicando twice-around-the-tree...")
-#     grafo_do_dataset, coordenadas = ler_dataset(dataset_name)
-#     adjacency_matrix = pd.DataFrame(grafo_do_dataset)
-#     G = nx.from_pandas_adjacency(adjacency_matrix)
-#
-#     try:
-#         before = time.time()
-#         hamiltonian_cycle, path_len = twice_around_the_tree.approx_tsp_tour(G, 'weight')
-#         after = time.time()
-#         timelapse = after - before
-#
-#         print("Approximate Hamiltonian Cycle:", hamiltonian_cycle)
-#         plotar_grafo_com_pesos(coordenadas, G, hamiltonian_cycle, f'plots/tatt/{dataset_name}')
-#         adicionar_linha_arquivo(dataset_name + ": " + "qualidade=" + str(path_len) + ", tempo decorrido=" + str(timelapse),
-#                                 f'plots/tatt/Success.txt')
-#     except twice_around_the_tree.MaxExecTime as err:
-#         print(err)
-#         adicionar_linha_arquivo(dataset_name, f'plots/tatt/NA.txt')
+for line in tp_datasets:
+    dataset_name = line.split('\t')[0]
+    print("Lendo: " + dataset_name + " e aplicando twice-around-the-tree...")
+    grafo_do_dataset, coordenadas = read_dataset(dataset_name)
+    adjacency_matrix = pd.DataFrame(grafo_do_dataset)
+    G = nx.from_pandas_adjacency(adjacency_matrix)
+
+    try:
+        before = time.time()
+        hamiltonian_cycle, path_len = twice_around_the_tree.approx_tsp_tour(G, 'weight')
+        after = time.time()
+        timelapse = after - before
+
+        print("Approximate Hamiltonian Cycle:", hamiltonian_cycle)
+        plot_and_save_graph(coordenadas, G, hamiltonian_cycle, f'plots/tatt/{dataset_name}')
+        add_line_on_file(dataset_name + ": " + "qualidade=" + str(path_len) + ", tempo decorrido=" + str(timelapse),
+                                f'plots/tatt/Success.txt')
+    except twice_around_the_tree.MaxExecTime as err:
+        print(err)
+        add_line_on_file(dataset_name, f'plots/tatt/NA.txt')
 
 
 # Christofides
